@@ -1,0 +1,158 @@
+---
+title: "Introduction to Transmission Channel Analysis"
+author: "Muhammad Alkhalaf"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to Transmission Channel Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5
+)
+```
+
+## Overview
+
+The **SVARtca** package implements Transmission Channel Analysis for structural
+vector autoregressive (SVAR) models, following the methodology of Wegner,
+Lieb, and Smeekes (2025).
+
+TCA answers the question: *How much of a shock's total effect on a target
+variable passes through a particular intermediate variable (channel)?*
+
+The method works by:
+
+1. Converting the VAR into a **systems form** representation.
+2. Selectively blocking transmission paths in the systems form DAG.
+3. Computing the difference between total and blocked effects.
+
+## Quick Start
+
+```{r quickstart}
+library(SVARtca)
+
+# Define a 4-variable VAR(1) model
+K <- 4
+A1 <- matrix(c( 0.7, -0.1,  0.05, -0.05,
+                -0.3,  0.6,  0.10, -0.10,
+                -0.2,  0.1,  0.70,  0.05,
+                -0.1,  0.2,  0.05,  0.65), K, K, byrow = TRUE)
+
+Sigma <- matrix(c(1.00, 0.30, 0.20, 0.10,
+                  0.30, 1.50, 0.25, 0.15,
+                  0.20, 0.25, 0.80, 0.10,
+                  0.10, 0.15, 0.10, 0.60), K, K, byrow = TRUE)
+
+Phi0 <- t(chol(Sigma))
+var_names <- c("IntRate", "GDP", "Inflation", "Wages")
+
+# Step 1: Build systems form
+sf <- tca_systems_form(Phi0, list(A1), h = 20)
+
+# Step 2: Run TCA
+result <- tca_analyze(
+  from          = 1,
+  B             = sf$B,
+  Omega         = sf$Omega,
+  intermediates = c(2, 4),
+  K             = K,
+  h             = 20,
+  order         = 1:K,
+  mode          = "exhaustive_4way",
+  var_names     = var_names
+)
+
+print(result, target = 3)
+```
+
+## Decomposition Modes
+
+### Overlapping
+
+Each channel is defined as `through(j) = total - not_through(j)`.
+Channels may overlap, so their sum can differ from the total.
+
+```{r overlapping}
+res_ov <- tca_analyze(
+  from = 1, B = sf$B, Omega = sf$Omega,
+  intermediates = c(2, 4), K = K, h = 20,
+  order = 1:K, mode = "overlapping", var_names = var_names
+)
+print(res_ov, target = 3)
+```
+
+### Exhaustive 3-Way
+
+Non-overlapping decomposition into: (1) through var1 inclusive,
+(2) through var2 only, (3) direct. The sum equals the total.
+
+```{r three_way}
+res_3w <- tca_analyze(
+  from = 1, B = sf$B, Omega = sf$Omega,
+  intermediates = c(2, 4), K = K, h = 20,
+  order = 1:K, mode = "exhaustive_3way", var_names = var_names
+)
+print(res_3w, target = 3)
+```
+
+### Exhaustive 4-Way
+
+Full inclusion-exclusion: (1) var1 only, (2) var2 only,
+(3) both, (4) direct. The sum equals the total.
+
+```{r four_way}
+res_4w <- tca_analyze(
+  from = 1, B = sf$B, Omega = sf$Omega,
+  intermediates = c(2, 4), K = K, h = 20,
+  order = 1:K, mode = "exhaustive_4way", var_names = var_names
+)
+print(res_4w, target = 3)
+```
+
+## Plotting
+
+```{r plot_bar}
+plot_tca(res_4w, target = 3, type = "bar")
+```
+
+```{r plot_line}
+plot_tca(res_ov, target = 3, type = "line")
+```
+
+## Validating Additivity
+
+The binary decomposition `total = through(j) + not_through(j)` holds
+exactly (at machine precision) for every variable:
+
+```{r validate}
+tca_validate_additivity(
+  from = 1, B = sf$B, Omega = sf$Omega,
+  K = K, h = 20, order = 1:K, var_names = var_names
+)
+```
+
+## Using with the vars Package
+
+If you have estimated a VAR using `vars::VAR()`, you can use the
+convenience wrapper:
+```{r vars_example, eval = FALSE}
+library(vars)
+data(Canada)
+var_est <- VAR(Canada, p = 2, type = "const")
+result <- tca_from_var(var_est, from = "e",
+                        intermediates = c("prod", "rw"),
+                        h = 20, mode = "exhaustive_4way")
+plot_tca(result, target = "U")
+```
+
+## Reference
+
+Wegner, E., Lieb, L., and Smeekes, S. (2025). *Transmission Channel
+Analysis in Dynamic Models.* arXiv:2405.18987.
