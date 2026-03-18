@@ -1,0 +1,207 @@
+---
+title: "SVARtca: Transmission Channel Analysis for Structural VAR Models in R"
+abstract: >
+  We introduce SVARtca, an R package implementing Transmission Channel Analysis
+  (TCA) for structural VAR models following Wegner, Lieb, and Smeekes (2025).
+  TCA decomposes impulse response functions into contributions from distinct
+  causal transmission channels using a systems form representation and directed
+  acyclic graph (DAG) path analysis. The package supports three decomposition
+  modes: overlapping channels, exhaustive 3-way decomposition, and exhaustive
+  4-way decomposition via the inclusion-exclusion principle. SVARtca provides a
+  high-level interface that works directly with vars::VAR objects, a low-level
+  systems form interface for custom SVAR specifications, and publication-ready
+  ggplot2 visualizations. It is a parallel R implementation of the original
+  MATLAB toolbox by Wegner, Lieb, and Smeekes, making this methodology
+  accessible to the large R-based macroeconometrics community. The package is
+  open-source under the GPL-3 license.
+author:
+  - name: Muhammad Abdullah Alkhalaf
+    affiliation: Rufyq Elngeh for Academic and Business Services
+    address: Riyadh, Saudi Arabia
+    orcid: 0009-0002-2677-9246
+    email: muhammedalkhalaf@gmail.com
+type: package
+output:
+  rjtools::rjournal_article:
+    self_contained: yes
+    toc: no
+bibliography: paper.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE, comment = "#>")
+```
+
+# Introduction
+
+Structural Vector Autoregression (SVAR) models are the workhorse of empirical
+macroeconomics for tracing the dynamic effects of structural shocks. Impulse
+response functions (IRFs) quantify the total effect of a shock on each variable
+over time, but they do not reveal *through which channels* the effects propagate.
+
+\citet{Wegner2025} introduced Transmission Channel Analysis (TCA), a methodology
+that decomposes IRFs into channel-specific contributions using the systems form
+representation and directed acyclic graph (DAG) path analysis. The original
+implementation is a MATLAB toolbox, limiting accessibility for the large R-based
+macroeconometrics community. The `vars` package \citep{Pfaff2008vars} provides
+SVAR estimation and IRF computation but not channel decomposition.
+
+`SVARtca` bridges this gap with a native R implementation that interfaces directly
+with `vars::VAR` objects while also providing a low-level systems form interface
+for custom SVAR specifications.
+
+# Methodology
+
+## Systems form representation
+
+Consider a K-variable VAR(p) model:
+
+$$\mathbf{y}_t = \sum_{j=1}^{p} \mathbf{\Phi}_j \mathbf{y}_{t-j} + \mathbf{u}_t$$
+
+With structural identification $\mathbf{u}_t = \mathbf{B} \boldsymbol{\varepsilon}_t$,
+the structural moving average representation is:
+
+$$\mathbf{y}_t = \sum_{s=0}^{\infty} \mathbf{\Theta}_s \boldsymbol{\varepsilon}_{t-s}$$
+
+where $\mathbf{\Theta}_s = \mathbf{\Psi}_s \mathbf{B}$ and $\mathbf{\Psi}_s$ are
+the reduced-form MA coefficients.
+
+## Transmission channel decomposition
+
+TCA converts the VAR to a systems form where the contemporaneous impact matrix
+$\mathbf{B}$ defines a DAG over the variables. A transmission channel from shock
+variable $i$ to target variable $j$ through intermediate variable $m$ is defined
+by the set of causal paths that pass through $m$.
+
+The channel-specific contribution is computed by zeroing out all paths in the
+systems form that do not pass through the specified intermediate, then
+recomputing the IRF from this modified system.
+
+## Decomposition modes
+
+Three modes are available:
+
+- **Overlapping:** Computes per-channel contributions independently. When channels
+  share intermediate variables, contributions may sum to more than the total IRF.
+- **Exhaustive 3-way:** Decomposes the total IRF into three non-overlapping
+  components: the inclusive channel (through at least one specified intermediate),
+  the exclusive channel (through none of the specified intermediates), and the
+  direct effect.
+- **Exhaustive 4-way:** Applies the inclusion-exclusion principle to decompose
+  into four components when two intermediates are specified: each channel alone,
+  the joint channel (through both), and the direct effect.
+
+# Usage
+
+## High-level interface with vars::VAR
+
+The `tca_from_var` function provides the simplest workflow:
+
+```{r svartca-var-example}
+library(SVARtca)
+library(vars)
+
+# Simulate a 4-variable macroeconomic system
+set.seed(42)
+n <- 200
+interest_rate <- arima.sim(list(ar = 0.8), n = n)
+credit <- 0.5 * interest_rate + arima.sim(list(ar = 0.6), n = n)
+exchange_rate <- -0.3 * interest_rate + 0.2 * credit +
+                 arima.sim(list(ar = 0.7), n = n)
+output <- 0.4 * credit - 0.2 * exchange_rate +
+          arima.sim(list(ar = 0.5), n = n)
+
+macro_data <- ts(data.frame(
+  interest_rate = interest_rate,
+  credit = credit,
+  exchange_rate = exchange_rate,
+  output = output
+))
+
+# Estimate VAR
+var_est <- VAR(macro_data, p = 2, type = "const")
+
+# Transmission channel analysis
+result <- tca_from_var(var_est,
+                       from = "interest_rate",
+                       intermediates = c("credit", "exchange_rate"),
+                       h = 20, mode = "overlapping")
+
+# Print results for output variable
+print(result, target = 3)
+
+# Publication-ready plot
+plot_tca(result, target = "output")
+```
+
+## Low-level systems form interface
+
+For custom SVAR specifications (e.g., sign restrictions, external instruments),
+construct the systems form directly:
+
+```{r svartca-lowlevel}
+# Example with custom identification
+K <- 4
+p <- 2
+
+# Suppose we have custom Phi0 (contemporaneous) and As (lag matrices)
+# from an externally identified SVAR
+Phi0 <- diag(K)  # placeholder - use actual identification
+As <- array(0, dim = c(K, K, p))  # placeholder - use estimated coefficients
+
+sf <- tca_systems_form(Phi0, As, h = 20, order = 1:K)
+result <- tca_analyze(from = 1, B = sf$B, Omega = sf$Omega,
+                      intermediates = c(2, 3), K = K, h = 20,
+                      order = 1:K, mode = "exhaustive_4way",
+                      var_names = c("interest_rate", "credit",
+                                    "exchange_rate", "output"))
+```
+
+## Visualization
+
+The `plot_tca` function produces `ggplot2` objects showing the total IRF alongside
+channel-specific contributions:
+
+```{r svartca-plot}
+# Overlapping channels plot
+p1 <- plot_tca(result, target = "output")
+
+# Customize with ggplot2
+library(ggplot2)
+p1 + theme_minimal() +
+  labs(title = "Monetary Policy Transmission to Output")
+```
+
+# Comparison with existing implementations
+
+The `vars` package \citep{Pfaff2008vars} provides comprehensive SVAR estimation
+including Cholesky, Blanchard--Quah, and structural identification, along with
+IRF computation and forecast error variance decomposition (FEVD). However, it
+does not decompose IRFs into channel-specific contributions.
+
+The `svars` package extends `vars` with data-driven identification methods
+(statistical identification via independent components, heteroskedasticity-based
+identification) but similarly provides only total IRFs without channel
+decomposition.
+
+`SVARtca` is complementary to both packages: it takes as input either a
+`vars::VAR` object or custom coefficient matrices and adds the TCA decomposition
+layer. The key methodological contribution is the ability to answer questions
+like "How much of the effect of a monetary policy shock on output operates
+through the credit channel versus the exchange rate channel?" --- questions that
+standard IRF analysis cannot address.
+
+The original MATLAB implementation by \citet{Wegner2025} provides the same
+methodology. `SVARtca` offers equivalent functionality in R with additional
+convenience features: direct `vars::VAR` integration, `ggplot2`-based
+visualization, and tidy output objects compatible with the R ecosystem.
+
+# Summary
+
+`SVARtca` makes Transmission Channel Analysis accessible to R users, enabling
+decomposition of SVAR impulse responses into channel-specific contributions.
+The package provides both high-level and low-level interfaces, supports three
+decomposition modes, and produces publication-ready visualizations. It is
+available on CRAN under GPL-3.
+
+\bibliography{paper}
