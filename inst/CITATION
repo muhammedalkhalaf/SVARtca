@@ -1,13 +1,14 @@
+﻿citHeader("To cite SVARtca in publications use:")
+
 bibentry(
-  bibtype  = "Article",
-  title    = "Transmission Channel Analysis in Dynamic Models",
-  author   = c(
-    person("Emanuel", "Wegner"),
-    person("Lenard", "Lieb"),
-    person("Stephan", "Smeekes")
-  ),
-  year     = "2025",
-  journal  = "arXiv preprint",
-  note     = "arXiv:2405.18987",
-  url      = "https://arxiv.org/abs/2405.18987"
+  bibtype  = "Manual",
+  title    = "Transmission Channel Analysis in Structural VAR Models",
+  author   = person("Muhammad Abdullah", "Alkhalaf",
+               email = "muhammedalkhalaf@gmail.com",
+               role  = c("aut", "cre"),
+               comment = c(ORCID = "0009-0002-2677-9246")),
+  year     = "2026",
+  note     = "R package version 1.0.2",
+  url      = "https://CRAN.R-project.org/package=SVARtca",
+  doi      = "10.32614/CRAN.package.SVARtca"
 )
