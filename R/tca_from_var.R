@@ -23,7 +23,7 @@ NULL
 #' @return A \code{tca_result} object (see \code{\link{tca_analyze}}).
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(vars)
 #' data(Canada)
 #' var_est <- VAR(Canada, p = 2, type = "const")

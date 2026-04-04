@@ -10,3 +10,12 @@
 ^pkgdown$
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
+^\.zenodo\.json$
+^paper\.bib$
+^paper\.md$
+^rjournal$
+^paper\.tex$
+^SVARtca_paper\.pdf$
+^SVARtca_paper\.tex$
+^SVARtca_references\.bib$
+^vignettes$

@@ -1,0 +1,110 @@
+\section{Summary}\label{summary}
+
+\texttt{SVARtca} is an R package implementing Transmission Channel
+Analysis (TCA) for structural VAR models following Wegner et al. (2025).
+TCA decomposes impulse response functions into contributions from
+distinct causal transmission channels using a systems form
+representation and DAG path analysis. The package supports overlapping
+channels, exhaustive 3-way and 4-way decompositions via the
+inclusion-exclusion principle, and publication-ready \texttt{ggplot2}
+visualizations. It is a parallel R implementation of the original MATLAB
+toolbox by Wegner, Lieb, and Smeekes.
+
+\section{Statement of Need}\label{statement-of-need}
+
+Standard SVAR impulse response analysis quantifies total shock effects
+but does not reveal \emph{through which channels} effects propagate.
+Wegner et al. (2025) introduced TCA to decompose IRFs into
+channel-specific contributions via DAG-based path analysis. The original
+MATLAB implementation limits accessibility for the large R-based
+macroeconometrics community. The \texttt{vars} package (Pfaff 2008)
+provides SVAR estimation but not channel decomposition. \texttt{SVARtca}
+bridges this gap with a native R implementation that interfaces directly
+with \texttt{vars::VAR} objects.
+
+\section{Usage}\label{usage}
+
+\subsection{From a VAR Object}\label{from-a-var-object}
+
+The \texttt{tca\_from\_var} function extracts coefficient matrices from
+a fitted \texttt{vars::VAR} object and performs TCA directly:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(SVARtca)}
+\FunctionTok{library}\NormalTok{(vars)}
+
+\NormalTok{var\_est }\OtherTok{\textless{}{-}} \FunctionTok{VAR}\NormalTok{(macro\_data, }\AttributeTok{p =} \DecValTok{2}\NormalTok{, }\AttributeTok{type =} \StringTok{"const"}\NormalTok{)}
+
+\NormalTok{result }\OtherTok{\textless{}{-}} \FunctionTok{tca\_from\_var}\NormalTok{(var\_est,}
+                       \AttributeTok{from =} \StringTok{"interest\_rate"}\NormalTok{,}
+                       \AttributeTok{intermediates =} \FunctionTok{c}\NormalTok{(}\StringTok{"credit"}\NormalTok{, }\StringTok{"exchange\_rate"}\NormalTok{),}
+                       \AttributeTok{h =} \DecValTok{20}\NormalTok{, }\AttributeTok{mode =} \StringTok{"overlapping"}\NormalTok{)}
+\FunctionTok{print}\NormalTok{(result, }\AttributeTok{target =} \DecValTok{3}\NormalTok{)}
+\FunctionTok{plot\_tca}\NormalTok{(result, }\AttributeTok{target =} \StringTok{"output"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Low-Level Systems Form
+Interface}\label{low-level-systems-form-interface}
+
+For custom SVAR specifications, construct the systems form directly:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{sf }\OtherTok{\textless{}{-}} \FunctionTok{tca\_systems\_form}\NormalTok{(Phi0, As, }\AttributeTok{h =} \DecValTok{20}\NormalTok{, }\AttributeTok{order =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{K)}
+\NormalTok{result }\OtherTok{\textless{}{-}} \FunctionTok{tca\_analyze}\NormalTok{(}\AttributeTok{from =} \DecValTok{1}\NormalTok{, }\AttributeTok{B =}\NormalTok{ sf}\SpecialCharTok{$}\NormalTok{B, }\AttributeTok{Omega =}\NormalTok{ sf}\SpecialCharTok{$}\NormalTok{Omega,}
+                      \AttributeTok{intermediates =} \FunctionTok{c}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{3}\NormalTok{), }\AttributeTok{K =}\NormalTok{ K, }\AttributeTok{h =} \DecValTok{20}\NormalTok{,}
+                      \AttributeTok{order =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{K, }\AttributeTok{mode =} \StringTok{"exhaustive\_4way"}\NormalTok{,}
+                      \AttributeTok{var\_names =} \FunctionTok{c}\NormalTok{(}\StringTok{"y1"}\NormalTok{, }\StringTok{"y2"}\NormalTok{, }\StringTok{"y3"}\NormalTok{, }\StringTok{"y4"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Decomposition Modes}\label{decomposition-modes}
+
+Three modes are available. \emph{Overlapping} computes per-channel
+contributions that may sum to more than the total when channels share
+intermediate variables. \emph{Exhaustive 3-way} decomposes into an
+inclusive channel, an exclusive channel, and the direct effect.
+\emph{Exhaustive 4-way} applies full inclusion-exclusion, yielding four
+non-overlapping components: each channel alone, both jointly, and the
+direct effect.
+
+\section{Implementation}\label{implementation}
+
+The SVAR in systems form:
+
+\[\mathbf{y}_t = \sum_{j=1}^{p} \mathbf{\Phi}_j \mathbf{y}_{t-j} + \mathbf{B} \boldsymbol{\varepsilon}_t\]
+
+The structural MA representation
+\(\mathbf{y}_t = \sum_{s=0}^{\infty} \mathbf{\Theta}_s \boldsymbol{\varepsilon}_{t-s}\)
+is decomposed via the DAG adjacency structure implied by the
+contemporaneous impact matrix \(\mathbf{B}\).
+
+\texttt{SVARtca} is implemented in pure R with dependencies on
+\texttt{Matrix}, \texttt{ggplot2}, and \texttt{rlang}. It accepts
+Cholesky or user-supplied identification and is compatible with SVAR
+objects from \texttt{vars}.
+
+\section{Acknowledgements}\label{acknowledgements}
+
+The author acknowledges Emanuel Wegner, Lenard Lieb, and Stephan Smeekes
+for developing TCA and the original MATLAB toolbox.
+
+\section*{References}\label{references}
+\addcontentsline{toc}{section}{References}
+
+\protect\phantomsection\label{refs}
+\begin{CSLReferences}{1}{1}
+\bibitem[\citeproctext]{ref-Pfaff2008vars}
+Pfaff, Bernhard. 2008. {``{VAR}, {SVAR} and {SVEC} Models:
+Implementation Within {R} Package {vars}.''} \emph{Journal of
+Statistical Software} 27 (4): 1--32.
+\url{https://doi.org/10.18637/jss.v027.i04}.
+
+\bibitem[\citeproctext]{ref-Wegner2025}
+Wegner, Emanuel, Lenard Lieb, and Stephan Smeekes. 2025.
+\emph{Transmission Channel Analysis in Dynamic Models}.
+\url{https://arxiv.org/abs/2405.18987}.
+
+\end{CSLReferences}

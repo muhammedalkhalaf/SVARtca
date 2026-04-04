@@ -1,7 +1,7 @@
 Package: SVARtca
 Type: Package
 Title: Transmission Channel Analysis in Structural VAR Models
-Version: 1.0.0
+Version: 1.0.2
 Date: 2026-03-15
 Authors@R: c(
     person("Muhammad", "Alkhalaf", role = c("aut", "cre"),
@@ -15,7 +15,7 @@ Authors@R: c(
            comment = "Original MATLAB toolbox author"))
 Description: Implements Transmission Channel Analysis (TCA) for structural
     vector autoregressive (SVAR) models following the methodology of
-    Wegner, Lieb, and Smeekes (2025) <arXiv:2405.18987>. TCA decomposes
+    Wegner, Lieb, and Smeekes (2025) <doi:10.48550/arXiv.2405.18987>. TCA decomposes
     impulse response functions (IRFs) into contributions from distinct
     transmission channels using a systems form representation and directed
     acyclic graph (DAG) path analysis. Supports overlapping channels,
@@ -38,5 +38,4 @@ Suggests:
     knitr,
     rmarkdown,
     vars
-VignetteBuilder: knitr
 Config/testthat/edition: 3

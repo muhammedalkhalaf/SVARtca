@@ -34,7 +34,7 @@ Extracts coefficient matrices and residual covariance from a fitted
 VAR model (from the \pkg{vars} package) and runs TCA.
 }
 \examples{
-\dontrun{
+\donttest{
 library(vars)
 data(Canada)
 var_est <- VAR(Canada, p = 2, type = "const")
