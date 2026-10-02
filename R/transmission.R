@@ -127,6 +127,69 @@ not_vars_for <- function(var_indices, K, h, order) {
   nv
 }
 
+#' Through Effect via AND Conditions (First-Passage Decomposition)
+#'
+#' Computes the effect of all paths that pass through at least one of the
+#' given systems form nodes, using only AND and NOT conditions in
+#' \code{\link{transmissionEffect}}. The set of such paths is partitioned by
+#' the first node of \code{nodes} that a path visits: paths through
+#' \code{nodes[i]} that do not visit \code{nodes[1:(i-1)]}. Summing the
+#' partition gives the through effect without using the identity
+#' through = total - not_through, so the result can be compared with that
+#' identity as an independent check of Theorem 2(ii) in Wegner, Lieb,
+#' Smeekes and Wilms (2025). Because the AND condition sets the effect on
+#' the conditioning node itself to zero, the result is only meaningful at
+#' target nodes that are not in \code{nodes}.
+#'
+#' @param from  Shock index (1-based, in systems form ordering).
+#' @param B     Systems form B matrix.
+#' @param Omega Systems form Omega matrix.
+#' @param nodes Increasing integer vector of systems form indices.
+#' @return Numeric vector of effects (length K*(h+1)).
+#' @keywords internal
+through_any_effect <- function(from, B, Omega, nodes) {
+  nodes <- sort(nodes)
+  out <- numeric(nrow(B))
+  for (i in seq_along(nodes)) {
+    out <- out + transmissionEffect(from, B, Omega,
+                                    and_vars = nodes[i],
+                                    not_vars = nodes[seq_len(i - 1)])
+  }
+  out
+}
+
+#' Through-Both Effect via AND Conditions
+#'
+#' Computes the effect of all paths that pass through at least one node of
+#' \code{nodes1} and at least one node of \code{nodes2}, by summing over the
+#' first node visited in each set (a double first-passage decomposition,
+#' \code{length(nodes1) * length(nodes2)} linear solves). Used by
+#' \code{\link{tca_validate_additivity}} to check the inclusion-exclusion
+#' identity independently of the way \code{\link{tca_analyze}} computes it.
+#'
+#' @param from   Shock index (1-based, in systems form ordering).
+#' @param B      Systems form B matrix.
+#' @param Omega  Systems form Omega matrix.
+#' @param nodes1 Integer vector of systems form indices (first variable).
+#' @param nodes2 Integer vector of systems form indices (second variable).
+#' @return Numeric vector of effects (length K*(h+1)).
+#' @keywords internal
+through_both_effect <- function(from, B, Omega, nodes1, nodes2) {
+  nodes1 <- sort(nodes1)
+  nodes2 <- sort(nodes2)
+  out <- numeric(nrow(B))
+  for (i in seq_along(nodes1)) {
+    for (j in seq_along(nodes2)) {
+      out <- out + transmissionEffect(
+        from, B, Omega,
+        and_vars = sort(c(nodes1[i], nodes2[j])),
+        not_vars = c(nodes1[seq_len(i - 1)], nodes2[seq_len(j - 1)])
+      )
+    }
+  }
+  out
+}
+
 #' Convert Systems Form Vector to IRF Matrix
 #'
 #' Transforms a systems form effect vector back to the original

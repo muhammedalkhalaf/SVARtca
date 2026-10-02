@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 
 The **SVARtca** package implements Transmission Channel Analysis for structural
 vector autoregressive (SVAR) models, following the methodology of Wegner,
-Lieb, and Smeekes (2025).
+Lieb, Smeekes and Wilms (2025).
 
 TCA answers the question: *How much of a shock's total effect on a target
 variable passes through a particular intermediate variable (channel)?*
@@ -128,14 +128,27 @@ plot_tca(res_ov, target = 3, type = "line")
 
 ## Validating Additivity
 
-The binary decomposition `total = through(j) + not_through(j)` holds
-exactly (at machine precision) for every variable:
+`tca_validate_additivity()` checks Theorem 2(ii) of the paper: for every
+variable `j`, the effect of the paths through `j` is recomputed with AND
+conditions (partitioning the paths by the first node of `j` they visit),
+added to the not-through effect and compared with the total effect. The
+residual is of the order of machine precision for a valid systems form.
+With `pair`, the inclusion-exclusion identity behind the 4-way mode is
+checked in the same way (this needs `(h+1)^2` linear solves, so a shorter
+horizon is used here):
 
 ```{r validate}
 tca_validate_additivity(
   from = 1, B = sf$B, Omega = sf$Omega,
   K = K, h = 20, order = 1:K, var_names = var_names
 )
+sf8 <- tca_systems_form(Phi0, list(A1), h = 8, order = 1:K)
+ok <- tca_validate_additivity(
+  from = 1, B = sf8$B, Omega = sf8$Omega,
+  K = K, h = 8, order = 1:K, var_names = var_names, pair = c(2, 4),
+  verbose = FALSE
+)
+attr(ok, "pair_residual")
 ```
 
 ## Using with the vars Package
@@ -154,5 +167,5 @@ plot_tca(result, target = "U")
 
 ## Reference
 
-Wegner, E., Lieb, L., and Smeekes, S. (2025). *Transmission Channel
-Analysis in Dynamic Models.* arXiv:2405.18987.
+Wegner, E., Lieb, L., Smeekes, S. and Wilms, I. (2025). *Transmission Channel
+Analysis in Dynamic Models.* arXiv:2405.18987. <https://doi.org/10.48550/arXiv.2405.18987>

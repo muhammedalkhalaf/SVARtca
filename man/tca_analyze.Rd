@@ -42,7 +42,8 @@ A list of class \code{"tca_result"} with components:
 }
 \description{
 Decomposes impulse response functions into transmission channel
-contributions using the methodology of Wegner, Lieb, Smeekes (2025).
+contributions using the methodology of Wegner, Lieb, Smeekes and Wilms
+(2025), \doi{10.48550/arXiv.2405.18987}.
 
 Three decomposition modes are supported:
 \describe{
@@ -73,7 +74,7 @@ result <- tca_analyze(from = 1, B = sf$B, Omega = sf$Omega,
 print(result)
 }
 \references{
-Wegner, E., Lieb, L., Smeekes, S. (2025).
+Wegner, E., Lieb, L., Smeekes, S. and Wilms, I. (2025).
 \emph{Transmission Channel Analysis in Dynamic Models.}
-arXiv:2405.18987.
+arXiv:2405.18987, \doi{10.48550/arXiv.2405.18987}.
 }

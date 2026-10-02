@@ -7,7 +7,9 @@
 \arguments{
 \item{x}{A \code{tca_result} object.}
 
-\item{target}{Target variable to display (default: first intermediate).}
+\item{target}{Integer index (original ordering) of the response variable
+to display. Default \code{NULL}, which displays variable 1 (the first
+variable), not the first intermediate.}
 
 \item{...}{Additional arguments (ignored).}
 }

@@ -25,6 +25,10 @@ A list with matrices \code{total}, \code{through},
 }
 \description{
 Decomposes the total IRF into the effect passing through a variable
-and the effect not passing through it. This is an exact decomposition
-(residual is zero at machine precision).
+and the effect not passing through it. The not-through effect is
+obtained by blocking every node of the variable (NOT condition) and the
+through effect is defined as \code{total - not_through}, so the three
+matrices satisfy \code{total = through + not_through} by construction.
+Use \code{\link{tca_validate_additivity}} to check the decomposition
+against an independent computation of the through effect.
 }

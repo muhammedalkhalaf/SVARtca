@@ -1,24 +1,26 @@
 Package: SVARtca
 Type: Package
 Title: Transmission Channel Analysis in Structural VAR Models
-Version: 1.0.2
-Date: 2026-03-15
+Version: 1.0.3
+Date: 2026-09-30
 Authors@R: c(
     person("Muhammad", "Alkhalaf", role = c("aut", "cre"),
            email = "muhammedalkhalaf@gmail.com",
            comment = c(ORCID = "0009-0002-2677-9246")),
-    person("Emanuel", "Wegner", role = "ctb",
-           comment = "Original MATLAB toolbox author"),
+    person("Enrico", "Wegner", role = "ctb",
+           comment = "Author of the MATLAB TCA toolbox the package is ported from; co-author of the original methodology"),
     person("Lenard", "Lieb", role = "ctb",
-           comment = "Original MATLAB toolbox author"),
+           comment = "Original methodology"),
     person("Stephan", "Smeekes", role = "ctb",
-           comment = "Original MATLAB toolbox author"))
+           comment = "Original methodology"),
+    person("Ines", "Wilms", role = "ctb",
+           comment = "Original methodology"))
 Description: Implements Transmission Channel Analysis (TCA) for structural
     vector autoregressive (SVAR) models following the methodology of
-    Wegner, Lieb, and Smeekes (2025) <doi:10.48550/arXiv.2405.18987>. TCA decomposes
-    impulse response functions (IRFs) into contributions from distinct
-    transmission channels using a systems form representation and directed
-    acyclic graph (DAG) path analysis. Supports overlapping channels,
+    Wegner, Lieb, Smeekes and Wilms (2025) <doi:10.48550/arXiv.2405.18987>.
+    TCA decomposes impulse response functions (IRFs) into contributions
+    from distinct transmission channels using a systems form representation
+    and directed acyclic graph (DAG) path analysis. Supports overlapping channels,
     exhaustive 3-way and 4-way decompositions via inclusion-exclusion
     principle. This is a parallel R implementation of the
     'tca-matlab-toolbox' (<https://github.com/enweg/tca-matlab-toolbox>).

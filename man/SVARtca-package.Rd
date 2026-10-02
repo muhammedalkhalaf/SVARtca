@@ -7,7 +7,7 @@
 The SVARtca package implements Transmission Channel Analysis (TCA) for
 decomposing impulse response functions in structural vector autoregressive
 (SVAR) models. The package follows the methodology presented in Wegner,
-Lieb, Smeekes (2025).
+Lieb, Smeekes and Wilms (2025).
 
 TCA enables researchers to decompose the total impulse response to a
 shock into contributions from different transmission channels. Supported
@@ -64,17 +64,17 @@ The package supports two identification schemes:
 If you use the SVARtca package in your research, please cite the original
 methodology paper:
 
-Wegner, E., Lieb, L., Smeekes, S. (2025).
+Wegner, E., Lieb, L., Smeekes, S. and Wilms, I. (2025).
 \emph{Transmission Channel Analysis in Dynamic Models.}
-arXiv:2405.18987.
+arXiv:2405.18987, \doi{10.48550/arXiv.2405.18987}.
 \url{https://github.com/enweg/tca-matlab-toolbox}
 }
 \author{
 Muhammad Alkhalaf
 }
 \references{
-Wegner, E., Lieb, L., Smeekes, S. (2025).
+Wegner, E., Lieb, L., Smeekes, S. and Wilms, I. (2025).
 Transmission Channel Analysis in Dynamic Models.
-arXiv:2405.18987.
+arXiv:2405.18987, \doi{10.48550/arXiv.2405.18987}.
 }
 \keyword{package}

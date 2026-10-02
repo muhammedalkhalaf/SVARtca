@@ -7,7 +7,8 @@ NULL
 #' Transmission Channel Analysis
 #'
 #' Decomposes impulse response functions into transmission channel
-#' contributions using the methodology of Wegner, Lieb, Smeekes (2025).
+#' contributions using the methodology of Wegner, Lieb, Smeekes and Wilms
+#' (2025), \doi{10.48550/arXiv.2405.18987}.
 #'
 #' Three decomposition modes are supported:
 #' \describe{
@@ -146,8 +147,12 @@ tca_analyze <- function(from, B, Omega, intermediates, K, h, order,
 #' Binary Decomposition: Total = Through + Not-Through
 #'
 #' Decomposes the total IRF into the effect passing through a variable
-#' and the effect not passing through it. This is an exact decomposition
-#' (residual is zero at machine precision).
+#' and the effect not passing through it. The not-through effect is
+#' obtained by blocking every node of the variable (NOT condition) and the
+#' through effect is defined as \code{total - not_through}, so the three
+#' matrices satisfy \code{total = through + not_through} by construction.
+#' Use \code{\link{tca_validate_additivity}} to check the decomposition
+#' against an independent computation of the through effect.
 #'
 #' @param from   Shock variable (1-based).
 #' @param B      Systems form B matrix.
@@ -156,7 +161,7 @@ tca_analyze <- function(from, B, Omega, intermediates, K, h, order,
 #' @param K       Number of variables.
 #' @param h       Maximum horizon.
 #' @param order   Transmission ordering.
-#' @return A list with matrices \code{total}, \code{"through},
+#' @return A list with matrices \code{total}, \code{through},
 #'   \code{not_through} (each (h+1) x K).
 #' @export
 tca_decompose_binary <- function(from, B, Omega, var_idx, K, h, order) {
@@ -174,9 +179,37 @@ tca_decompose_binary <- function(from, B, Omega, var_idx, K, h, order) {
 
 #' Validate Binary Additivity
 #'
-#' Tests that total = through(j) + not_through(j) holds for all
-#' variables at machine precision. This is a diagnostic to verify
-#' correct implementation.
+#' Checks Theorem 2(ii) of Wegner, Lieb, Smeekes and Wilms (2025): the
+#' effects of disjoint transmission channels sum to the total effect.
+#' For every variable \code{j}, the effect of the paths passing through
+#' \code{j} (at any horizon) is computed independently of the identity
+#' \code{through = total - not_through}, by partitioning those paths by the
+#' first node of \code{j} they visit and summing the AND-conditioned
+#' effects of the parts (see \code{\link{tca_analyze}} for the AND and NOT
+#' conditions). This independent through effect plus the NOT-conditioned
+#' not-through effect is then compared with the total effect. The residual
+#' is evaluated at all response variables other than \code{j} itself,
+#' because the AND condition sets the effect on the conditioning node to
+#' zero while the effect on \code{j} counts entirely as "through \code{j}"
+#' in the \code{total - not_through} convention.
+#'
+#' If \code{pair} is given, the inclusion-exclusion identity used by the
+#' \code{"exhaustive_4way"} mode of \code{\link{tca_analyze}},
+#' \code{through(v1 and v2) = through(v1) + through(v2) - through(v1 or v2)},
+#' is also checked: the left-hand side is computed directly with AND
+#' conditions on both variables (a double first-passage sum of
+#' \code{(h+1)^2} linear solves, so keep \code{h} moderate), the right-hand
+#' side from the independent single-variable through effects and
+#' \code{total - not_through(v1, v2)}. The residual is evaluated at all
+#' response variables other than \code{v1} and \code{v2}.
+#'
+#' The function also reports whether \code{B} is strictly lower triangular
+#' (entries on and above the diagonal at most \code{1e-12} times the
+#' largest absolute entry), which the systems form requires for the graph
+#' to be acyclic. Before
+#' version 1.0.3 the residual was computed as
+#' \code{total - ((total - not_through) + not_through)}, which is zero by
+#' construction and could not detect any error.
 #'
 #' @param from      Shock variable (1-based).
 #' @param B         Systems form B matrix.
@@ -186,37 +219,96 @@ tca_decompose_binary <- function(from, B, Omega, var_idx, K, h, order) {
 #' @param order     Transmission ordering.
 #' @param var_names Character vector of variable names (optional).
 #' @param verbose   Logical; print results? Default \code{TRUE}.
-#' @return Invisibly returns \code{TRUE} if all tests pass.
+#' @param pair      Optional integer vector of two distinct variable numbers
+#'   (1-based) for which the inclusion-exclusion identity is checked.
+#' @param tol       Tolerance for the maximum absolute residual. Default
+#'   \code{1e-10}.
+#' @return Invisibly returns a logical, \code{TRUE} if \code{B} is strictly
+#'   lower triangular and every residual is below \code{tol}, with
+#'   attributes \code{residuals} (named numeric vector, the maximum absolute
+#'   additivity residual for each variable), \code{pair_residual} (the
+#'   maximum absolute inclusion-exclusion residual, or \code{NA} if
+#'   \code{pair} is \code{NULL}), \code{max_residual} (the largest of these)
+#'   and \code{lower_triangular} (logical).
 #' @export
+#' @examples
+#' Phi0 <- matrix(c(1, 0.3, 0, 0.95), 2, 2)
+#' As <- list(matrix(c(0.5, -0.1, 0.2, 0.4), 2, 2))
+#' sf <- tca_systems_form(Phi0, As, h = 5)
+#' ok <- tca_validate_additivity(1, sf$B, sf$Omega, K = 2, h = 5,
+#'                               order = 1:2, pair = c(1, 2))
+#' attr(ok, "max_residual")
+#' # A backward edge breaks the acyclic structure and is detected
+#' Bc <- sf$B; Bc[1, 4] <- 0.2
+#' tca_validate_additivity(1, Bc, sf$Omega, K = 2, h = 5, order = 1:2)
 tca_validate_additivity <- function(from, B, Omega, K, h, order,
-                                     var_names = NULL, verbose = TRUE) {
+                                     var_names = NULL, verbose = TRUE,
+                                     pair = NULL, tol = 1e-10) {
   if (is.null(var_names)) var_names <- paste0("Var", seq_len(K))
   total_vec <- transmissionEffect(from, B, Omega)
-  max_resid <- 0
+  n <- length(total_vec)
+
+  # strictly lower triangular up to rounding noise from the LD decomposition
+  upper_max <- max(abs(B[upper.tri(B, diag = TRUE)]))
+  lower_tri <- upper_max <= 1e-12 * max(1, max(abs(B)))
 
   if (verbose) cat("===== Binary Additivity Test =====\n")
+  residuals <- numeric(K)
+  names(residuals) <- var_names
+  th_indep <- vector("list", K)
   for (v in seq_len(K)) {
     nv <- not_vars_for(v, K, h, order)
     nt <- transmissionEffect(from, B, Omega, not_vars = nv)
-    th <- total_vec - nt
-    max_r <- max(abs(total_vec - (th + nt)))
-    max_resid <- max(max_resid, max_r)
-    if (verbose) cat(sprintf("  %s: max |residual| = %.2e\n", var_names[v], max_r))
+    th <- through_any_effect(from, B, Omega, nv)
+    th_indep[[v]] <- th
+    keep <- setdiff(seq_len(n), nv)
+    residuals[v] <- max(abs((total_vec - (th + nt))[keep]))
+    if (verbose) cat(sprintf("  %s: max |total - (through + not_through)| = %.2e\n",
+                             var_names[v], residuals[v]))
   }
 
-  passed <- max_resid < 1e-12
+  pair_resid <- NA_real_
+  if (!is.null(pair)) {
+    if (length(pair) != 2 || pair[1] == pair[2] || any(!pair %in% seq_len(K))) {
+      stop("'pair' must contain two distinct variable numbers in 1:K.")
+    }
+    n1 <- not_vars_for(pair[1], K, h, order)
+    n2 <- not_vars_for(pair[2], K, h, order)
+    th_and <- through_both_effect(from, B, Omega, n1, n2)
+    nt_both <- transmissionEffect(from, B, Omega, not_vars = c(n1, n2))
+    th_or <- total_vec - nt_both
+    rhs <- th_indep[[pair[1]]] + th_indep[[pair[2]]] - th_or
+    keep <- setdiff(seq_len(n), c(n1, n2))
+    pair_resid <- max(abs((th_and - rhs)[keep]))
+    if (verbose) cat(sprintf("  %s and %s: max |inclusion-exclusion residual| = %.2e\n",
+                             var_names[pair[1]], var_names[pair[2]], pair_resid))
+  }
+
+  max_resid <- max(c(residuals, pair_resid), na.rm = TRUE)
+  passed <- lower_tri && max_resid < tol
   if (verbose) {
-    cat(sprintf("\nOverall max |residual| = %.2e\n", max_resid))
+    cat(sprintf("\nB strictly lower triangular: %s\n", if (lower_tri) "yes" else "NO"))
+    cat(sprintf("Overall max |residual| = %.2e (tolerance %.1e)\n", max_resid, tol))
     if (passed) cat("PASSED\n") else cat("WARNING: Additivity violation\n")
   }
+  attr(passed, "residuals") <- residuals
+  attr(passed, "pair_residual") <- pair_resid
+  attr(passed, "max_residual") <- max_resid
+  attr(passed, "lower_triangular") <- lower_tri
   invisible(passed)
 }
 
 #' Print TCA Result
 #'
+#' S3 print method for \code{tca_result} objects. Displays a formatted
+#' table of transmission channel contributions across horizons.
+#'
 #' @param x   A \code{tca_result} object.
-#' @param target Target variable to display (default: first intermediate).
+#' @param target Integer index (original ordering) of the response variable
+#'   to display. Default \code{NULL}, which displays variable 1 (the first
+#'   variable), not the first intermediate.
 #' @param ...   Additional arguments (ignored).
+#' @return Invisibly returns \code{x}.
 #' @export
 print.tca_result <- function(x, target = NULL, ...) {
   if (is.null(target)) target <- 1

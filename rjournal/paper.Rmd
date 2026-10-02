@@ -2,7 +2,7 @@
 title: "SVARtca: Transmission Channel Analysis for Structural VAR Models in R"
 abstract: >
   We introduce SVARtca, an R package implementing Transmission Channel Analysis
-  (TCA) for structural VAR models following Wegner, Lieb, and Smeekes (2025).
+  (TCA) for structural VAR models following Wegner, Lieb, Smeekes and Wilms (2025).
   TCA decomposes impulse response functions into contributions from distinct
   causal transmission channels using a systems form representation and directed
   acyclic graph (DAG) path analysis. The package supports three decomposition
@@ -11,7 +11,7 @@ abstract: >
   high-level interface that works directly with vars::VAR objects, a low-level
   systems form interface for custom SVAR specifications, and publication-ready
   ggplot2 visualizations. It is a parallel R implementation of the original
-  MATLAB toolbox by Wegner, Lieb, and Smeekes, making this methodology
+  MATLAB TCA toolbox (Wegner, Lieb, Smeekes and Wilms, 2025), making this methodology
   accessible to the large R-based macroeconometrics community. The package is
   open-source under the GPL-3 license.
 author:
