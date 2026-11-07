@@ -15,7 +15,7 @@ authors:
     email: muhammedalkhalaf@gmail.com
     affiliation: 1
 affiliations:
-  - name: Rufyq Elngeh for Academic and Business Services, Riyadh, Saudi Arabia
+  - name: Rufyq Elngeh for Academic and Business Services
     index: 1
 date: 18 March 2026
 bibliography: paper.bib
