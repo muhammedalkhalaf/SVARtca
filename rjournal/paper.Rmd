@@ -17,7 +17,6 @@ abstract: >
 author:
   - name: Muhammad Abdullah Alkhalaf
     affiliation: Rufyq Elngeh for Academic and Business Services
-    address: Riyadh, Saudi Arabia
     orcid: 0009-0002-2677-9246
     email: muhammedalkhalaf@gmail.com
 type: package
